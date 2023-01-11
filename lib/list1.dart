@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase/users.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -10,42 +12,30 @@ class List1 extends StatefulWidget {
 }
 
 class _List1State extends State<List1> {
+  final user = FirebaseAuth.instance.currentUser;
+  var collection = FirebaseFirestore.instance.collection('names');
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          title: Text("FIREBASE"),
-          centerTitle: true,
-        ),
-        body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance.collection("names").snapshots(),
-            builder: (context, snapshots) {
-              if (snapshots.hasData) {
-                return ListView.builder(
-                    itemCount: snapshots
-                        .data!.docs.length, //no. of data fields in firebase
-                    scrollDirection: Axis.vertical,
-                    shrinkWrap: true,
-                    itemBuilder: (BuildContext context, int index) {
-                      QueryDocumentSnapshot<Map<String, dynamic>>
-                          documentSnapshot = snapshots.data!.docs[index];
-                      return Padding(
-                        padding: EdgeInsets.all(20),
-                        child: Card(
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20)),
-                          child: ListTile(
-                            title: Text(documentSnapshot.data()["input"] ??
-                                ' '), //the data in firebase under input title
-                          ),
-                        ),
-                      );
-                    });
-              } else {
-                return Container(
-                  color: Colors.pink,
-                );
-              }
-            }));
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: collection.doc(user!.uid).get(),
+      builder: (_, snapshot) {
+        if (snapshot.hasError) return Text('Error = ${snapshot.error}');
+
+        if (snapshot.hasData) {
+          final Map<String, dynamic>? data = snapshot.data!.data();
+          final user = Users.fromJson(data ?? {});
+          return Column(
+            children: [
+              Text(user.mail),
+              Text(user.age.toString()),
+              Text(user.gender)
+            ],
+          );
+        }
+
+        return Center(child: CircularProgressIndicator());
+      },
+    );
   }
 }
